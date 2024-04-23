@@ -2,114 +2,37 @@
 
     namespace Coco\cocoApp\Kernel\Server;
 
-    use Coco\cocoApp\CocoAppConsts;
-    use Coco\cocoApp\Kernel\Exceptions\KernelException;
-    use Coco\constants\Consts;
-    use Coco\cocoApp\Kernel\Abstracts\BooterAbstract;
     use Coco\cocoApp\Kernel\Abstracts\ServerAbstract;
-    use Coco\cocoApp\Kernel\Listeners\WebRunListener;
-    use Coco\cocoApp\Kernel\Services\ConfigProvider;
-    use Coco\cocoApp\Kernel\Utils;
+    use Coco\cocoApp\KernelModule\Events\WebSiteServerInitEndEvent;
+    use Coco\cocoApp\KernelModule\Events\WebSiteServerInitStartEvent;
+    use Coco\cocoApp\KernelModule\Listeners\ServerRunner\WebRunListener;
 
     class WebSiteServer extends ServerAbstract
     {
-        public function boot(): void
+        protected function getRunnerListener(): WebRunListener
         {
-            $app = $this->cocoApp;
-
-            $this->initBooters($app->getBooters());
-
-            $app->afterInitBooter();
+            return new WebRunListener();
         }
 
-        /**
-         * @param BooterAbstract[] $booters
-         *
-         * @return $this
-         * @throws KernelException
-         */
-        public function initBooters(array $booters): static
+        protected function initServer(): void
         {
-            $app = $this->cocoApp;
+            $this->cocoApp->event->triggerEvent(new WebSiteServerInitStartEvent($this));
 
-            if (count($booters))
+            $booters = $this->cocoApp->getBooters();
+
+            foreach ($booters as $appName => $booter)
             {
-                foreach ($booters as $appName => $booter)
-                {
-                    $app->registerConfigsBydir($booter->getAppInfo()->getConfigDir());
-
-                    foreach ($app->getUserConfigs() as $configDir)
-                    {
-                        $app->registerConfigsBydir($configDir);
-                    }
-                }
-
-                $app->registerService(ConfigProvider::class);
-
-                foreach ($booters as $appName => $booter)
-                {
-                    $this->registerMiddlewareBydir($booter->getAppInfo()->getMiddlewareDir());
-                    $this->registerRoutersBydir($booter->getAppInfo()->getRoutesDir());
-                    $app->registerServicesByDir($booter->getAppInfo()->getServicesDir());
-                    $app->registerEventListenersByDir($booter->getAppInfo()->getListenersDir());
-                    $app->appInfoRegistry->addApp($booter->getAppInfo());
-                }
+                //加载路由
+                $this->cocoApp->registerRoutersBydir($booter->getAppInfo()->getRoutesDir());
             }
 
-            $this->registerMiddleware(require Consts::getValue('CORE_RESOURCE_PATH') . 'defaultMiddleware.php');
+            foreach ($booters as $appName => $booter)
+            {
+                //注册中间件
+                $this->cocoApp->registerMiddlewareBydir($booter->getAppInfo()->getMiddlewareDir());
+            }
 
-            return $this;
+            $this->cocoApp->event->triggerEvent(new WebSiteServerInitEndEvent($this));
         }
-
-        protected function initRunnerListener(): static
-        {
-            $this->cocoApp->registerEventListener(CocoAppConsts::CORE_PROCESS_RUN, new WebRunListener($this->cocoApp));
-
-            return $this;
-        }
-
-        public function registerRoutersBydir($path): static
-        {
-            Utils::scanDir($path, function($file) {
-                $callback = require $file;
-
-                if (is_callable($callback))
-                {
-                    $this->registerRouter($callback);
-                }
-            });
-
-            return $this;
-        }
-
-        public function registerRouter(callable $callback): static
-        {
-            call_user_func_array($callback, [$this->cocoApp->slim]);
-
-            return $this;
-        }
-
-
-        public function registerMiddlewareBydir($path): static
-        {
-            Utils::scanDir($path, function($file) {
-                $callback = require $file;
-
-                if (is_callable($callback))
-                {
-                    $this->registerMiddleware($callback);
-                }
-            });
-
-            return $this;
-        }
-
-        public function registerMiddleware(callable $callback): static
-        {
-            call_user_func_array($callback, [$this->cocoApp->slim]);
-
-            return $this;
-        }
-
 
     }

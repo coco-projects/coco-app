@@ -2,87 +2,30 @@
 
     namespace Coco\cocoApp\Kernel\Server;
 
-    use Coco\cocoApp\CocoAppConsts;
-    use Coco\cocoApp\Kernel\Abstracts\BooterAbstract;
     use Coco\cocoApp\Kernel\Abstracts\ServerAbstract;
-    use Coco\cocoApp\Kernel\Exceptions\KernelException;
-    use Coco\cocoApp\Kernel\Listeners\ConsoleRunListener;
-    use Coco\cocoApp\Kernel\Services\ConfigProvider;
-    use Coco\cocoApp\Kernel\Utils;
+    use Coco\cocoApp\KernelModule\Events\ConsoleInitEndEvent;
+    use Coco\cocoApp\KernelModule\Events\ConsoleInitStartEvent;
+    use Coco\cocoApp\KernelModule\Listeners\ServerRunner\ConsoleRunListener;
 
     class ConsoleServer extends ServerAbstract
     {
-        protected function boot(): void
+        protected function getRunnerListener(): ConsoleRunListener
         {
-            $app = $this->cocoApp;
-
-            $this->initBooters($app->getBooters());
-
-            $app->afterInitBooter();
+            return new ConsoleRunListener();
         }
 
-        /**
-         * @param BooterAbstract[] $booters
-         *
-         * @return $this
-         * @throws KernelException
-         */
-        protected function initBooters(array $booters): static
+        protected function initServer(): void
         {
-            $app = $this->cocoApp;
+            $this->cocoApp->event->triggerEvent(new ConsoleInitStartEvent($this));
 
-            if (count($booters))
+            $booters = $this->cocoApp->getBooters();
+
+            foreach ($booters as $appName => $booter)
             {
-                foreach ($booters as $appName => $booter)
-                {
-                    $app->registerConfigsBydir($booter->getAppInfo()->getConfigDir());
-
-                    foreach ($app->getUserConfigs() as $configDir)
-                    {
-                        $app->registerConfigsBydir($configDir);
-                    }
-                }
-
-                $app->registerService(ConfigProvider::class);
-
-                foreach ($booters as $appName => $booter)
-                {
-                    $this->registerCommandsBydir($booter->getAppInfo()->getCommandsDir());
-                    $app->registerServicesByDir($booter->getAppInfo()->getServicesDir());
-                    $app->registerEventListenersByDir($booter->getAppInfo()->getListenersDir());
-                    $app->appInfoRegistry->addApp($booter->getAppInfo());
-                }
+                //加载命令定义
+                $this->cocoApp->registerCommandsBydir($booter->getAppInfo()->getCommandsDir());
             }
 
-            return $this;
+            $this->cocoApp->event->triggerEvent(new ConsoleInitEndEvent($this));
         }
-
-        protected function initRunnerListener(): static
-        {
-            $this->cocoApp->registerEventListener(CocoAppConsts::CORE_PROCESS_RUN, new ConsoleRunListener($this->cocoApp));
-
-            return $this;
-        }
-
-        public function registerCommandsBydir($path): static
-        {
-            Utils::scanDir($path, function($file) {
-                $callback = require $file;
-
-                if (is_callable($callback))
-                {
-                    $this->registerCommand($callback);
-                }
-            });
-
-            return $this;
-        }
-
-        public function registerCommand(callable $callback): static
-        {
-            call_user_func_array($callback, [$this->cocoApp->consleCommand]);
-
-            return $this;
-        }
-
     }

@@ -2,7 +2,7 @@
 
     namespace Coco\cocoApp\Kernel\Business\Logic;
 
-    use \Coco\cocoApp\CocoApp;
+    use Coco\cocoApp\Kernel\CocoApp;
     use Coco\dataSource\filter\MysqlFilter;
     use Coco\dataSource\source\MysqlSource;
     use Coco\processManager\CallableLogic;

@@ -2,7 +2,7 @@
 
     namespace Coco\cocoApp\Kernel\Traits;
 
-    use Coco\cocoApp\CocoApp;
+    use Coco\cocoApp\Kernel\CocoApp;
 
     trait AppBaseTrait
     {

@@ -2,7 +2,7 @@
 
     namespace Coco\cocoApp\Kernel\Business\Model;
 
-    use \Coco\cocoApp\CocoApp;
+    use Coco\cocoApp\Kernel\CocoApp;
     use Coco\cocoApp\Kernel\Traits\AppBaseTrait;
 
     abstract class ModelAbstract

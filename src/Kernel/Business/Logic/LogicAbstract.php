@@ -2,7 +2,8 @@
 
     namespace Coco\cocoApp\Kernel\Business\Logic;
 
-    use \Coco\cocoApp\CocoApp;
+    use Coco\cocoApp\Kernel\Business\Model\ModelAbstract;
+    use Coco\cocoApp\Kernel\CocoApp;
     use Coco\cocoApp\Kernel\Traits\AppBaseTrait;
     use Coco\validate\Validate;
 
@@ -46,14 +47,20 @@
 
         private function initModel(): void
         {
-            $modelClassName = $this->makeAttrClass('Model');
-            $this->model    = $modelClassName::getIns();
+            /**
+             * @var $className ModelAbstract
+             */
+            $className   = $this->makeAttrClass('Model');
+            $this->model = $className::getIns();
         }
 
         private function initValidate(): void
         {
-            $modelClassName = $this->makeAttrClass('Validate');
-            $this->validate = new $modelClassName();
+            /**
+             * @var $className Validate
+             */
+            $className      = $this->makeAttrClass('Validate');
+            $this->validate = new $className();
         }
 
         private function makeAttrClass($attr): string

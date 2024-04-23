@@ -2,7 +2,7 @@
 
     namespace Coco\cocoApp\Kernel\Business\Logic;
 
-    use \Coco\cocoApp\CocoApp;
+    use Coco\cocoApp\Kernel\CocoApp;
     use Coco\dataSource\abstracts\BaseFilter;
     use Coco\processManager\CallableLogic;
     use Coco\processManager\ProcessRegistry;

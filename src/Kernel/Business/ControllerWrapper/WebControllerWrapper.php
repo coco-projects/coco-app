@@ -16,49 +16,52 @@
         private ?WebControllerAbstract $invokeObject;
         private ?string                $invokeMethod;
 
-        public static function classHandler(string $controllerName, string $method): static
+        public static function classHandler(string $controllerName, string $method): callable
         {
             $ins = static::getIns();
 
-            $ins->invokeObject = new $controllerName($ins);
-            $ins->invokeMethod = $method;
+            return function(Request $request, Response $response, $args) use ($ins, $controllerName, $method): Response {
 
-            return $ins;
+                $ins->request  = $request;
+                $ins->response = $response;
+                $ins->args     = $args;
+
+                $ins->invokeObject = new $controllerName($ins);
+                $ins->invokeMethod = $method;
+
+                $ins->invokeObject->init();
+
+                return call_user_func_array([
+                    $ins->invokeObject,
+                    $ins->invokeMethod,
+                ], [$ins]);
+            };
         }
 
-        public static function closure(callable $callback): static
+        public static function closure(string $appName, callable $callback): callable
         {
             $ins = static::getIns();
 
-            $controller = new WebClosureController($ins);
-            $method     = '_' . md5(spl_object_hash($controller));
+            return function(Request $request, Response $response, $args) use ($ins, $appName, $callback): Response {
 
-            $controller::injectMethod($method, $callback);
+                $ins->request  = $request;
+                $ins->response = $response;
+                $ins->args     = $args;
 
-            $ins->invokeObject = $controller;
-            $ins->invokeMethod = $method;
+                $controller = new WebClosureController($appName, $ins);
+                $method     = '_' . md5(spl_object_hash($controller));
+                $controller::injectMethod($method, $callback);
 
-            return $ins;
+                $ins->invokeObject = $controller;
+                $ins->invokeMethod = $method;
+
+                $ins->invokeObject->init();
+
+                return call_user_func_array([
+                    $ins->invokeObject,
+                    $ins->invokeMethod,
+                ], [$ins]);
+            };
         }
-
-        public function __invoke(Request $request, Response $response, $args): Response
-        {
-            $this->request  = $request;
-            $this->response = $response;
-            $this->args     = $args;
-
-            $this->invokeObject->init();
-
-            return $this->invokeAction();
-        }
-
-        protected function invokeAction(): Response
-        {
-            return call_user_func_array([
-                $this->invokeObject,
-                $this->invokeMethod,
-            ], [$this]);
-        }
-
 
     }
